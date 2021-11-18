@@ -4,7 +4,15 @@ import io.gatling.http.Predef._
 import scala.concurrent.duration._
 class Houzz3Simulation extends Simulation {
 
-  // val myCookie = Cookie()
+
+  object Browse {
+
+   val feeder = csv("urls.csv").eager.random
+
+  val browse = feed(feeder).exec(
+      http("random").get("${path}")
+    )
+  }
 
   val httpConf = http
     .baseUrl("https://www.houzz3.com") // Here is the root for all relative URLs
@@ -16,26 +24,13 @@ class Houzz3Simulation extends Simulation {
     .header("Cache-Control", "max-age=0")
     .header("connection", "keep-alive")
 
-  val user1 = scenario("some_common_entries")
-    .exec(
-      http("home").get("/")
-    )
-    .pause(500 milliseconds)
-    .exec(
-      http("ideas").get("/photos/home-design-ideas-phbr0-bp~")
-    )
-    .pause(500 milliseconds)
-    .exec(
-      http("products_furniture").get("/products/furniture")
-    )
-    .pause(500 milliseconds)
-    .exec(
-      http("pro_architect").get("/professionals/architect")
-    )
-    .pause(2500 milliseconds)
+  val user1 = scenario("random").exec(Browse.browse)
 
   setUp(
-    user1.inject(constantConcurrentUsers(7).during(10.minutes)).protocols(httpConf)
+    // 3.5 per pod?
+    user1.inject( // 1800 req / 15 min / pod
+      rampUsers(3600).during(5.minutes)
+    ).protocols(httpConf)
   )
 
 }
